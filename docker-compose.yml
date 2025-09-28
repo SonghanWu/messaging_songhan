@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: messaging-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: messaging_test
+      MYSQL_USER: messaging
+      MYSQL_PASSWORD: messaging2021
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - messaging-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  app:
+    build: .
+    container_name: messaging-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/messaging_test
+      SPRING_DATASOURCE_USERNAME: messaging
+      SPRING_DATASOURCE_PASSWORD: messaging2021
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: your-aws-access-key-here
+      AWS_SECRET_ACCESS_KEY: your-aws-secret-key-here
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - messaging-network
+
+volumes:
+  mysql_data:
+
+networks:
+  messaging-network:
+    driver: bridge
